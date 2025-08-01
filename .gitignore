@@ -1,0 +1,20 @@
+# Môi trường ảo Python
+/venv/
+
+# Thư mục cache của Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Vector Database (chứa dữ liệu cá nhân)
+# Cân nhắc kỹ việc có muốn đưa lên hay không.
+# Nếu muốn giữ riêng tư, hãy thêm dòng này:
+/diary_db/
+
+# Các file của hệ điều hành
+.DS_Store
+Thumbs.db
+
+# Các file cấu hình của IDE
+.vscode/
+.idea/
