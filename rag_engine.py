@@ -117,6 +117,33 @@ class PersonalAssistant:
         )
         self.vector_store.persist()
         return f"Đã lưu nhật ký ngày {date}."
+    
+    def add_knowledge_document(self, content: str, source: str):
+        """
+        Thêm một tài liệu kiến thức vào Vector DB.
+        - content: Nội dung kiến thức.
+        - source: Nguồn của kiến thức (ví dụ: "Tài liệu StarCoder2", "Wikipedia")
+        """
+        print(f"Đang thêm tài liệu kiến thức từ nguồn: {source}")
+        
+        # Metadata để phân biệt với nhật ký
+        metadata = {
+            "source": source,
+            "import_date": datetime.datetime.now().strftime("%Y-%m-%d"),
+            "type": "knowledge_document" # Đây là key quan trọng để phân biệt
+        }
+        
+        # Tạo một ID duy nhất cho tài liệu
+        # Dùng hàm hash của Python để tạo ID từ nội dung
+        doc_id = f"knowledge_{hash(content)}"
+
+        self.vector_store.add_texts(
+            texts=[content],
+            metadatas=[metadata],
+            ids=[doc_id]
+        )
+        self.vector_store.persist()
+        return f"Đã lưu tài liệu kiến thức từ nguồn '{source}'."
 
     def query(self, question: str, thinking_mode: bool = False, debug_mode: bool = False):
         """

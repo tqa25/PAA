@@ -98,7 +98,43 @@ with st.sidebar:
                 st.success(result)
         else:
             st.warning("Vui lòng nhập nội dung nhật ký.")
-            
+
+    st.divider()
+
+    st.header("Thêm Kiến thức mới")
+    knowledge_source = st.text_input("Nguồn kiến thức (ví dụ: Wikipedia)", key="kb_source")
+    knowledge_content = st.text_area("Nội dung kiến thức", height=200, key="kb_content")
+
+    # Thay thế toàn bộ khối lệnh 'if st.button("Lưu kiến thức")' bằng đoạn này
+
+    if st.button("Lưu kiến thức"):
+        if knowledge_content and knowledge_source:
+            with st.spinner("Đang xử lý và lưu trữ kiến thức..."):
+                # KIỂM TRA VÀ KHỞI TẠO ASSISTANT NẾU CẦN
+                # (Logic này được copy từ phần 'Lưu nhật ký')
+                if 'assistant' not in st.session_state:
+                    # Lấy tham số đã lưu hoặc dùng giá trị mặc định nếu chưa có
+                    if 'last_params' in st.session_state and st.session_state.last_params:
+                        params = st.session_state.last_params
+                    else:
+                        # Tạo một bộ tham số mặc định lần đầu tiên
+                        params = (st.session_state.selected_model, 0.7, 0.8, 20, 1.5)
+                        st.session_state.last_params = params
+                    
+                    # Khởi tạo assistant
+                    st.session_state.assistant = PersonalAssistant(
+                        model_name=params[0], temperature=params[1], top_p=params[2], top_k=params[3], presence_penalty=params[4]
+                    )
+                
+                # Bây giờ, assistant chắc chắn đã tồn tại trong session state
+                assistant = st.session_state.assistant
+                
+                # Gọi hàm để thêm kiến thức
+                result = assistant.add_knowledge_document(knowledge_content, knowledge_source)
+                st.success(result)
+        else:
+            st.warning("Vui lòng nhập đầy đủ nội dung và nguồn kiến thức.")
+          
     if st.button("Tạo báo cáo & Gợi ý cho ngày mai"):
         with st.spinner("Đang phân tích..."):
              if 'assistant' not in st.session_state:
