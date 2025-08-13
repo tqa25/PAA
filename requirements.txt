@@ -1,0 +1,27 @@
+# requirements_optimized.txt
+
+# Core dependencies
+streamlit>=1.28.0
+langchain>=0.1.0
+langchain-community>=0.0.20
+sentence-transformers>=2.2.2
+chromadb>=0.4.15
+
+# Performance dependencies
+aiofiles>=23.0.0
+
+# Model serving
+ollama>=0.1.7
+
+# Data processing
+numpy>=1.24.0
+pandas>=2.0.0  # Optional, for advanced analytics
+
+# System monitoring (optional)
+psutil>=5.9.0  # For memory monitoring
+memory-profiler>=0.61.0  # For profiling
+
+# Development tools (optional)
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0
