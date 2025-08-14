@@ -1,138 +1,128 @@
 import streamlit as st
 import ollama
+import streamlit_authenticator as stauth
+from streamlit_authenticator.utilities.hasher import Hasher
 import json
 import os
 
-# ==========================
-# 🔒 Đọc cấu hình bảo mật từ secrets
-# ==========================
+# ==============================
+# 🔒 Lấy mật khẩu từ secrets
+# ==============================
 PASSWORD = st.secrets.get("app_password", None)
-HISTORY_FILE = st.secrets.get("history_file", "chat_history.json")
+COOKIE_KEY = st.secrets.get("cookie_key", None)
 
-st.set_page_config(page_title="Assistant", layout="centered")
-
-# Nếu chưa cấu hình mật khẩu -> chặn chạy
 if not PASSWORD:
-    st.error("Chưa cấu hình mật khẩu. Thêm app_password vào .streamlit/secrets.toml rồi chạy lại.")
+    st.error("Không tìm thấy 'app_password' trong secrets.toml")
     st.stop()
 
-# ==========================
-# 🔐 Màn hình đăng nhập
-# ==========================
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-if not st.session_state.authenticated:
-    st.title("🔑 Đăng nhập")
-    pwd = st.text_input("Nhập mật khẩu:", type="password")
-    if st.button("Đăng nhập", type="primary"):
-        if pwd == PASSWORD:
-            st.session_state.authenticated = True
-            st.rerun()
-        else:
-            st.error("Sai mật khẩu!")
+if not COOKIE_KEY:
+    st.error("Không tìm thấy 'cookie_key' trong secrets.toml")
     st.stop()
 
-# ==========================
-# 📂 Lịch sử chat (lưu file JSON)
-# ==========================
-def load_history(path):
-    if os.path.exists(path):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return []
-    return []
+# Hash mật khẩu
+hashed_passwords = Hasher.hash_list([PASSWORD])
 
-def save_history(path, history):
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(history, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        st.error(f"Lỗi lưu lịch sử: {e}")
+# ==============================
+# 🛠 Cấu hình xác thực
+# ==============================
+config = {
+    "credentials": {
+        "usernames": {
+            "user": {
+                "name": "User",
+                "password": hashed_passwords[0]
+            }
+        }
+    },
+    "cookie": {
+        "name": "assistant_ai_cookie",
+        "key": COOKIE_KEY,
+        "expiry_days": 1
+    }
+}
 
-# ==========================
-# 🧠 Model list & preload
-# ==========================
-def get_models():
+# Khởi tạo Authenticator
+authenticator = stauth.Authenticate(
+    config["credentials"],
+    config["cookie"]["name"],
+    config["cookie"]["key"],
+    config["cookie"]["expiry_days"]
+)
+
+# ==============================
+# 🚪 Login
+# ==============================
+authenticator.login(location="main")
+auth_status = st.session_state.get("authentication_status")
+name = st.session_state.get("name")
+username = st.session_state.get("username")
+
+if auth_status:
+    st.title("💬 Assistant (Ollama, Streaming)")
+
+    # Lấy danh sách model
     try:
-        info = ollama.list()
-        return [m["model"] for m in info.get("models", [])]
+        models = [m["model"] for m in ollama.list().get("models", [])]
     except Exception as e:
         st.error(f"Lỗi lấy danh sách model: {e}")
-        return []
+        st.stop()
 
-def preload_model(model_name):
-    try:
-        # ping nhẹ để model warm-up
-        ollama.chat(model=model_name, messages=[{"role": "system", "content": "ping"}])
-    except Exception as e:
-        st.error(f"Lỗi preload model: {e}")
+    if not models:
+        st.error("Không tìm thấy model trong Ollama. Hãy chạy `ollama pull` trước.")
+        st.stop()
 
-# ==========================
-# 🚀 UI chính
-# ==========================
-if "messages" not in st.session_state:
-    st.session_state.messages = load_history(HISTORY_FILE)
+    selected_model = st.selectbox("Chọn model", models, index=0)
 
-st.title("💬 Assistant (Ollama, Streaming)")
+    # Load lịch sử chat
+    history_file = st.secrets.get("history_file", "chat_history.json")
+    if "messages" not in st.session_state:
+        if os.path.exists(history_file):
+            with open(history_file, "r", encoding="utf-8") as f:
+                st.session_state.messages = json.load(f)
+        else:
+            st.session_state.messages = []
 
-# Chọn model đang có
-models = get_models()
-if not models:
-    st.error("Không tìm thấy model trong Ollama. Hãy chạy ollama pull trước.")
-    st.stop()
+    # Hiển thị lịch sử chat
+    for msg in st.session_state.messages:
+        st.chat_message(msg["role"]).write(msg["content"])
 
-selected_model = st.selectbox("Chọn model", models, index=0)
+    # Ô nhập chat
+    prompt = st.chat_input("Nhập tin nhắn và nhấn Enter...")
+    if prompt:
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.chat_message("user").write(prompt)
 
-# Preload khi đổi model
-if st.session_state.get("last_model") != selected_model:
-    preload_model(selected_model)
-    st.session_state.last_model = selected_model
+        with st.chat_message("assistant"):
+            placeholder = st.empty()
+            full = ""
+            try:
+                stream = ollama.chat(
+                    model=selected_model,
+                    messages=st.session_state.messages,
+                    stream=True
+                )
+                for chunk in stream:
+                    token = chunk["message"]["content"]
+                    full += token
+                    placeholder.write(full)
+            except Exception as e:
+                st.error(f"Lỗi khi gọi model: {e}")
 
-# Hiển thị lịch sử
-for msg in st.session_state.messages:
-    st.chat_message(msg["role"]).write(msg["content"])
+            st.session_state.messages.append({"role": "assistant", "content": full})
 
-# Ô nhập prompt (Enter để gửi)
-prompt = st.chat_input("Nhập tin nhắn và nhấn Enter...")
+        # Giới hạn số lượng message để tránh file quá nặng (vd 200 tin cuối)
+        MAX_MESSAGES = 200
+        if len(st.session_state.messages) > MAX_MESSAGES:
+            st.session_state.messages = st.session_state.messages[-MAX_MESSAGES:]
 
-if prompt:
-    # Lưu và hiển thị tin nhắn người dùng
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.chat_message("user").write(prompt)
+        # Lưu lịch sử chat
+        with open(history_file, "w", encoding="utf-8") as f:
+            json.dump(st.session_state.messages, f, ensure_ascii=False, indent=2)
 
-    # Stream phản hồi
-    with st.chat_message("assistant"):
-        placeholder = st.empty()
-        full = ""
-        try:
-            stream = ollama.chat(
-                model=selected_model,
-                messages=st.session_state.messages,
-                stream=True
-            )
-            for chunk in stream:
-                token = chunk["message"]["content"]
-                full += token
-                placeholder.write(full)
-        except Exception as e:
-            st.error(f"Lỗi khi gọi model: {e}")
+    # Nút đăng xuất
+    authenticator.logout(location="main")
 
-        st.session_state.messages.append({"role": "assistant", "content": full})
-
-    # Lưu lịch sử ra file
-    save_history(HISTORY_FILE, st.session_state.messages)
-
-# Thanh tiện ích
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("🗑 Xóa lịch sử chat"):
-        st.session_state.messages = []
-        save_history(HISTORY_FILE, [])
-        st.rerun()
-with col2:
-    if st.button("🚪 Đăng xuất"):
-        st.session_state.authenticated = False
-        st.rerun()
+elif auth_status is False:
+    st.error("Sai tài khoản hoặc mật khẩu")
+elif auth_status is None:
+    st.warning("Vui lòng nhập thông tin đăng nhập")
