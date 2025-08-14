@@ -18,3 +18,4 @@ Thumbs.db
 # Các file cấu hình của IDE
 .vscode/
 .idea/
+.streamlit/
