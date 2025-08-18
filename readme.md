@@ -1,115 +1,88 @@
-🎯 Mục tiêu:
-Một trợ lý AI cá nhân sử dụng mô hình ngôn ngữ lớn (LLM) như LLaMA 3, Gemma… để:
 
-Phân tích nhật ký hàng ngày của người dùng (mood, hoạt động, sức khỏe…)
-
-Truy xuất kiến thức đã lưu (RAG)
-
-Tương tác như một chatbot hỗ trợ sức khỏe, thói quen, và lịch trình
 
 📁 Cấu Trúc Thư Mục
 
-/tqa (repo gốc)
-├── app.py                  # Giao diện người dùng Streamlit chính
-├── rag_engine.py          # Máy xử lý chính (RAG + LLM + vectorDB)
-├── config.py              # Cấu hình model, DB, prompts, cache...
-├── requirements.txt       # Thư viện phụ thuộc
-├── run_assistant.bat      # File chạy nhanh cho Windows
-🧠 Thành phần chính & luồng hoạt động
-1. Giao diện người dùng – app.py
-Dùng Streamlit để xây dựng một dashboard điều khiển tương tác.
+project/
+├── app.py              # Main Streamlit application
+├── backend.py          # Backend logic và API calls
+├── chat_history.json   # File lưu lịch sử (tự tạo)
+└── README.md          # File này
 
-Chức năng:
 
-Lưu nhật ký ngày mới (assistant.add_diary_entry)
+1. Quản lý Model AI
 
-Thêm kiến thức vào vector store (assistant.add_knowledge_document)
+Mô tả: Tự động phát hiện và liệt kê các model đã cài đặt trong Ollama
+Cách hoạt động:
 
-Chat với AI (assistant.query)
+Kết nối với Ollama API để lấy danh sách model
+Hiển thị dropdown cho phép chọn model khác nhau trong một phiên chat
+Xử lý lỗi khi không kết nối được với Ollama hoặc không có model nào
 
-Xem báo cáo tuần, phân tích sức khỏe
 
-➡️ Người dùng nhập qua form → gọi tới OptimizedPersonalAssistant để xử lý.
 
-2. Lõi xử lý AI – rag_engine.py
-🧩 Gồm các lớp chính:
-✅ OptimizedPersonalAssistant
-Khởi tạo lazy các thành phần:
+2. Quản lý phiên Chat (Session Management)
 
-Mô hình ngôn ngữ lớn LLM (llm)
+Mô tả: Hệ thống quản lý nhiều cuộc hội thoại độc lập
+Cách hoạt động:
 
-Vector database (vector_store)
+Mỗi phiên có ID duy nhất (UUID) và tên riêng
+Lưu trữ lịch sử tin nhắn riêng biệt cho từng phiên
+Tự động tạo tên phiên theo thời gian (Phiên mới HH:MM:SS)
+Theo dõi phiên hiện tại và thời gian cập nhật cuối
 
-Encoder tạo embedding (encoder)
 
-Chuỗi RAG (rag_chain)
 
-Tính năng chính:
+3. Lưu trữ lịch sử Chat
 
-.add_diary_entry(content) → trích xuất thông tin từ nhật ký & lưu DB
+Mô tả: Lưu trữ toàn bộ lịch sử chat vào file JSON local
+Cách hoạt động:
 
-.add_knowledge_document(content, source) → lưu kiến thức rời rạc
+File chat_history.json chứa tất cả sessions và messages
+Tự động lưu sau mỗi tin nhắn
+Khôi phục lại lịch sử khi khởi động ứng dụng
+Giới hạn tối đa 200 tin nhắn mỗi phiên để tối ưu performance
 
-.query(question) → xử lý câu hỏi và tìm context nếu cần
 
-.get_daily_summary_and_plan() và .get_health_insights() → prompt đặc biệt
 
-✅ OptimizedVietSBERTEncoder
-Tạo embedding cho nội dung bằng mô hình sentence-transformers (Vi-SBERT)
+4. Giao diện Sidebar tương tác
 
-Có cache nội bộ để tăng tốc độ xử lý văn bản
+Mô tả: Sidebar chứa các tính năng quản lý và điều hướng
+Các thành phần:
 
-✅ ResponseCache
-Cache phản hồi dựa vào question + model + parameters
+Chọn Model: Dropdown để chuyển đổi AI model
+Nút tạo phiên mới: Tạo cuộc hội thoại mới với một click
+Lịch sử phiên: Expander hiển thị danh sách các phiên chat
 
-Tránh gọi lại LLM khi hỏi lại nội dung giống nhau
 
-3. Cấu hình – config.py
-Bao gồm:
-Lựa chọn model (OLLAMA_MODEL, EMBEDDING_MODEL)
 
-Cấu hình vector DB (ChromaDB)
+5. Menu ngữ cảnh cho từng phiên
 
-Template prompt cho các tác vụ:
+Mô tả: Popover menu cho mỗi phiên chat với các tùy chọn
+Tính năng:
 
-Phân tích nhật ký → JSON
+Đổi tên phiên: Nhập tên mới và lưu
+Xóa nội dung: Xóa toàn bộ tin nhắn trong phiên (giữ lại phiên)
+Xóa phiên: Xóa hoàn toàn phiên chat
 
-Lên thực đơn
 
-Lên lịch tập luyện
 
-Chat tổng quát
+6. Streaming Response
 
-Tối ưu thông số riêng cho từng model (MODEL_CONFIGS)
+Mô tả: Hiển thị phản hồi AI theo thời gian thực
+Cách hoạt động:
 
-4. Flow hoạt động chính (logic tổng thể)
+Sử dụng Ollama streaming API
+Cập nhật từng token một vào placeholder
+Xử lý lỗi khi model không phản hồi
 
-graph TD
-    A[Người dùng nhập nhật ký / câu hỏi / kiến thức] --> B[Streamlit UI (app.py)]
-    B --> C[Assistant = OptimizedPersonalAssistant]
-    
-    C -->|Lưu nhật ký| D1[Trích xuất mood / activities / notes từ content bằng LLM]
-    D1 --> D2[Lưu vào VectorDB (ChromaDB) với metadata]
-    
-    C -->|Thêm kiến thức| E1[Lưu nội dung + source vào VectorDB]
-    
-    C -->|Truy vấn| F1[Xử lý prompt, lấy context từ VectorDB nếu cần]
-    F1 --> F2[Gọi LLM trả lời]
-    F2 --> G[Trả kết quả và cache lại nếu cần]
-📌 Ưu điểm thiết kế
-✅ Lazy loading giúp khởi tạo nhẹ, chỉ load khi cần → tối ưu hiệu năng
 
-✅ Caching 2 lớp: embedding + response → tránh xử lý lại
 
-✅ Prompt đa nhiệm: Lên thực đơn, luyện tập, phân tích sức khỏe → dễ tùy biến
+7. Dark Theme UI
 
-✅ Dễ mở rộng thêm loại văn bản, loại truy vấn
+Mô tả: Giao diện tối hiện đại và thân thiện với mắt
+Đặc điểm:
 
-📦 Yêu cầu môi trường (from requirements.txt)
-streamlit – UI
-
-langchain, chromadb, sentence-transformers – RAG & Embedding
-
-ollama – Model runner nội bộ
-
-psutil, memory-profiler – (Tùy chọn) phân tích hiệu năng
+Màu nền tối (#1e1f20)
+Button hover effects với màu xanh (#8ab4f8)
+Responsive layout cho session rows
+Typography tối ưu cho dark mode
