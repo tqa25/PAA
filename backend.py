@@ -1,7 +1,11 @@
 import json
 import os
 from datetime import datetime
-import ollama
+
+try:
+    import ollama  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    ollama = None
 
 DATA_FILE = "chat_history.json"
 
@@ -38,42 +42,43 @@ def clear_session_messages(data, sid):
 
 def list_models():
     """Trả về danh sách model có trong Ollama với multiple fallback methods."""
-    
-    # Method 1: Thử ollama.list() API
-    try:
-        result = ollama.list()
-        
-        # Case 1: Result is dict with 'models' key
-        if isinstance(result, dict) and "models" in result:
-            models = []
-            for model in result["models"]:
-                if isinstance(model, dict):
-                    # Thử các key có thể có: name, model, id
-                    model_name = model.get("name") or model.get("model") or model.get("id")
-                    if model_name:
-                        models.append(model_name)
-                elif isinstance(model, str):
-                    models.append(model)
-            
-            if models:
-                return models
-        
-        # Case 2: Result has .models attribute  
-        elif hasattr(result, "models"):
-            models = []
-            for model in result.models:
-                if hasattr(model, "name"):
-                    models.append(model.name)
-                elif isinstance(model, dict):
-                    model_name = model.get("name") or model.get("model")
-                    if model_name:
-                        models.append(model_name)
-            
-            if models:
-                return models
-                
-    except Exception as e:
-        print(f"ollama.list() failed: {e}")
+
+    # Method 1: Thử ollama.list() API nếu thư viện tồn tại
+    if ollama is not None:
+        try:
+            result = ollama.list()
+
+            # Case 1: Result is dict with 'models' key
+            if isinstance(result, dict) and "models" in result:
+                models = []
+                for model in result["models"]:
+                    if isinstance(model, dict):
+                        # Thử các key có thể có: name, model, id
+                        model_name = model.get("name") or model.get("model") or model.get("id")
+                        if model_name:
+                            models.append(model_name)
+                    elif isinstance(model, str):
+                        models.append(model)
+
+                if models:
+                    return models
+
+            # Case 2: Result has .models attribute
+            elif hasattr(result, "models"):
+                models = []
+                for model in result.models:
+                    if hasattr(model, "name"):
+                        models.append(model.name)
+                    elif isinstance(model, dict):
+                        model_name = model.get("name") or model.get("model")
+                        if model_name:
+                            models.append(model_name)
+
+                if models:
+                    return models
+
+        except Exception as e:
+            print(f"ollama.list() failed: {e}")
     
     # Method 2: Fallback to command line
     try:
@@ -105,6 +110,9 @@ def list_models():
 
 def chat_with_model(model, messages):
     """Stream phản hồi từ LLM."""
+    if ollama is None:
+        yield {"message": {"role": "assistant", "content": "⚠️ Lỗi: thư viện ollama chưa được cài đặt"}}
+        return
     try:
         response = ollama.chat(model=model, messages=messages, stream=True)
         for chunk in response:
