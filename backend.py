@@ -7,7 +7,14 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
     ollama = None
 
+try:  # Optional dependency for n8n integration
+    import requests  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    requests = None
+
 DATA_FILE = "chat_history.json"
+LOG_FILE = "user_logs.json"
+N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL")
 
 # ================== HISTORY ==================
 
@@ -36,6 +43,30 @@ def clear_session_messages(data, sid):
     if sid in data["sessions"]:
         data["sessions"][sid]["messages"] = []
     return data
+
+
+# ================== LOGGING ==================
+
+def log_user_activity(session_id: str, message: str, model: str | None = None) -> None:
+    """Append a user action to the log file."""
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "session_id": session_id,
+        "model": model,
+        "message": message,
+    }
+
+    logs = []
+    if os.path.exists(LOG_FILE):
+        try:
+            with open(LOG_FILE, "r", encoding="utf-8") as f:
+                logs = json.load(f)
+        except json.JSONDecodeError:
+            logs = []
+
+    logs.append(entry)
+    with open(LOG_FILE, "w", encoding="utf-8") as f:
+        json.dump(logs, f, ensure_ascii=False, indent=2)
 
 
 # ================== OLLAMA ==================
@@ -120,3 +151,29 @@ def chat_with_model(model, messages):
                 yield chunk
     except Exception as e:
         yield {"message": {"role": "assistant", "content": f"⚠️ Lỗi: {e}"}}
+
+
+# ================== N8N SEARCH ==================
+
+def search_online(query: str) -> str:
+    """Search online via n8n self-host webhook."""
+    if not N8N_WEBHOOK_URL:
+        return "⚠️ N8N_WEBHOOK_URL chưa được cấu hình"
+    payload = {"query": query}
+    try:
+        if requests is not None:
+            resp = requests.post(N8N_WEBHOOK_URL, json=payload, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+        else:  # Fallback to urllib if requests is missing
+            import urllib.request
+            req = urllib.request.Request(
+                N8N_WEBHOOK_URL,
+                data=json.dumps(payload).encode(),
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=15) as f:  # type: ignore[attr-defined]
+                data = json.load(f)
+        return data.get("result") or data.get("text") or json.dumps(data)
+    except Exception as e:  # pragma: no cover - network operations
+        return f"⚠️ Search failed: {e}"

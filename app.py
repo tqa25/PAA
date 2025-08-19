@@ -65,6 +65,16 @@ with st.sidebar.expander("🕑 Lịch sử", expanded=True):
                     backend.save_history(data)
                     st.rerun()
 
+with st.sidebar.expander("🔍 Tìm kiếm online", expanded=False):
+    query = st.text_input("Từ khóa", key="search_query")
+    if st.button("Search", key="search_btn", use_container_width=True) and query:
+        result = backend.search_online(query)
+        backend.log_user_activity(current_sid, f"search: {query}")
+        if current_sid in sessions:
+            sessions[current_sid]["messages"].append({"role": "assistant", "content": result})
+            backend.save_history(data)
+        st.rerun()
+
 # ================== MAIN CHAT ==================
 st.title("💬 Nói Chuyện Với Hàn")
 
@@ -83,6 +93,7 @@ else:
     # Nhập prompt mới
     if prompt := st.chat_input("Nhập tin nhắn và nhấn Enter..."):
         session["messages"].append({"role": "user", "content": prompt})
+        backend.log_user_activity(current_sid, prompt, model)
         backend.save_history(data)
 
         # Hiển thị input user ngay lập tức

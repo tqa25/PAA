@@ -86,3 +86,20 @@ Màu nền tối (#1e1f20)
 Button hover effects với màu xanh (#8ab4f8)
 Responsive layout cho session rows
 Typography tối ưu cho dark mode
+
+
+8. Ghi nhật ký người dùng
+
+Mô tả: Lưu lại các thao tác của người dùng để phân tích và tạo báo cáo trong tương lai
+Cách hoạt động:
+
+- Mỗi tin nhắn hoặc hành động tìm kiếm sẽ được ghi vào `user_logs.json` với thời gian, phiên và model
+
+9. Tìm kiếm online qua n8n
+
+Mô tả: Kết nối với n8n self-host để tra cứu tài liệu mới nhất
+Cách hoạt động:
+
+- Nhập từ khóa trong mục "Tìm kiếm online" ở sidebar
+- Ứng dụng gửi yêu cầu đến webhook n8n (đặt trong biến môi trường `N8N_WEBHOOK_URL`)
+- Kết quả trả về được hiển thị như một tin nhắn trợ lý trong phiên chat hiện tại
