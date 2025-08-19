@@ -65,15 +65,6 @@ with st.sidebar.expander("🕑 Lịch sử", expanded=True):
                     backend.save_history(data)
                     st.rerun()
 
-with st.sidebar.expander("🔍 Tìm kiếm online", expanded=False):
-    query = st.text_input("Từ khóa", key="search_query")
-    if st.button("Search", key="search_btn", use_container_width=True) and query:
-        result = backend.search_online(query)
-        backend.log_user_activity(current_sid, f"search: {query}")
-        if current_sid in sessions:
-            sessions[current_sid]["messages"].append({"role": "assistant", "content": result})
-            backend.save_history(data)
-        st.rerun()
 
 # ================== MAIN CHAT ==================
 st.title("💬 Nói Chuyện Với Hàn")
@@ -90,25 +81,41 @@ else:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
+    # Tùy chọn bổ sung
+    opt_col1, opt_col2 = st.columns(2)
+    with opt_col1:
+        save_log = st.checkbox("\ud83d\udcdd Lưu nhật ký", key="save_log")
+    with opt_col2:
+        online_search = st.checkbox("\ud83d\udd0d Search online", key="online_search")
+
     # Nhập prompt mới
     if prompt := st.chat_input("Nhập tin nhắn và nhấn Enter..."):
         session["messages"].append({"role": "user", "content": prompt})
-        backend.log_user_activity(current_sid, prompt, model)
+        if save_log:
+            backend.log_user_activity(current_sid, prompt, model)
         backend.save_history(data)
 
         # Hiển thị input user ngay lập tức
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Assistant stream
-        with st.chat_message("assistant"):
-            placeholder = st.empty()
-            full_response = ""
+        if online_search:
+            result = backend.search_online(prompt)
+            with st.chat_message("assistant"):
+                st.markdown(result)
+            session["messages"].append({"role": "assistant", "content": result})
+            backend.save_history(data)
+            st.rerun()
+        else:
+            # Assistant stream
+            with st.chat_message("assistant"):
+                placeholder = st.empty()
+                full_response = ""
 
-            for chunk in backend.chat_with_model(model, session["messages"]):
-                token = chunk["message"]["content"]
-                full_response += token
-                placeholder.markdown(full_response)
+                for chunk in backend.chat_with_model(model, session["messages"]):
+                    token = chunk["message"]["content"]
+                    full_response += token
+                    placeholder.markdown(full_response)
 
             session["messages"].append({"role": "assistant", "content": full_response})
             backend.save_history(data)
