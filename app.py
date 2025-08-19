@@ -2,6 +2,33 @@ import streamlit as st
 from datetime import datetime
 import backend
 
+
+def toggle_button(label: str, key: str) -> bool:
+    if key not in st.session_state:
+        st.session_state[key] = False
+    active = st.session_state[key]
+    btn_key = f"{key}_btn"
+    if st.button(label, key=btn_key):
+        st.session_state[key] = not active
+        active = st.session_state[key]
+    color = "#8ab4f8" if active else "#e3e3e3"
+    st.markdown(
+        f"""
+        <style>
+        div[data-testid='stButton'][id='{btn_key}'] > button {{
+            background: transparent !important;
+            border: none !important;
+            color: {color} !important;
+            padding: 0 !important;
+            margin-top: 0 !important;
+            font-size: 13px !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    return active
+
 # ================== UI CONFIG ==================
 st.set_page_config(page_title="Chat App", layout="wide")
 
@@ -19,6 +46,8 @@ current_sid = data["current_session"]
 
 # ================== SIDEBAR ==================
 st.sidebar.title("Menu")
+if current_sid in sessions:
+    st.sidebar.caption(f"Phiên hiện tại: {sessions[current_sid]['name']}")
 
 models = backend.list_models()
 model = st.sidebar.selectbox("Chọn model", models)
@@ -88,43 +117,56 @@ else:
     # Tùy chọn bổ sung
     opt_col1, opt_col2 = st.columns(2)
     with opt_col1:
-        save_log = st.checkbox("📝 Lưu nhật ký", key="save_log")
+        save_log = toggle_button("📝 Nhật ký", "save_log")
     with opt_col2:
-        online_search = st.checkbox("🔍 Search online", key="online_search")
+        online_search = toggle_button("🔍 Search", "online_search")
 
     if prompt:
-        session["messages"].append({"role": "user", "content": prompt})
         if save_log:
-            backend.log_user_activity(current_sid, prompt, model)
-        backend.save_history(data)
-
-        # Hiển thị input user ngay lập tức
-        with st.chat_message("user"):
-            st.markdown(f'<div class="chat-msg">{prompt}</div>', unsafe_allow_html=True)
-
-        if online_search:
-            result = backend.search_online(prompt)
+            with st.chat_message("user"):
+                st.markdown(f'<div class="chat-msg">{prompt}</div>', unsafe_allow_html=True)
+            try:
+                backend.log_user_activity(current_sid, prompt, model)
+                ack = "✅ Đã lưu nhật ký."
+            except Exception as e:  # pragma: no cover - filesystem errors
+                ack = f"⚠️ Lưu nhật ký thất bại: {e}"
             with st.chat_message("assistant"):
-                st.markdown(f'<div class="chat-msg">{result}</div>', unsafe_allow_html=True)
-            session["messages"].append({"role": "assistant", "content": result})
+                st.markdown(f'<div class="chat-msg">{ack}</div>', unsafe_allow_html=True)
+            session["messages"].append({"role": "user", "content": prompt, "log_only": True})
+            session["messages"].append({"role": "assistant", "content": ack, "log_only": True})
             backend.save_history(data)
             st.rerun()
         else:
-            # Assistant stream
-            with st.chat_message("assistant"):
-                placeholder = st.empty()
-                full_response = ""
-
-                for chunk in backend.chat_with_model(model, session["messages"]):
-                    token = chunk["message"]["content"]
-                    full_response += token
-                    placeholder.markdown(full_response)
-
-                placeholder.markdown(f'<div class="chat-msg">{full_response}</div>', unsafe_allow_html=True)
-
-            session["messages"].append({"role": "assistant", "content": full_response})
+            session["messages"].append({"role": "user", "content": prompt})
             backend.save_history(data)
-            st.rerun()
+
+            with st.chat_message("user"):
+                st.markdown(f'<div class="chat-msg">{prompt}</div>', unsafe_allow_html=True)
+
+            if online_search:
+                result = backend.search_online(prompt)
+                with st.chat_message("assistant"):
+                    st.markdown(f'<div class="chat-msg">{result}</div>', unsafe_allow_html=True)
+                session["messages"].append({"role": "assistant", "content": result})
+                backend.save_history(data)
+                st.rerun()
+            else:
+                # Assistant stream
+                with st.chat_message("assistant"):
+                    placeholder = st.empty()
+                    full_response = ""
+
+                    context = [m for m in session["messages"] if not m.get("log_only")]
+                    for chunk in backend.chat_with_model(model, context):
+                        token = chunk["message"]["content"]
+                        full_response += token
+                        placeholder.markdown(full_response)
+
+                    placeholder.markdown(f'<div class="chat-msg">{full_response}</div>', unsafe_allow_html=True)
+
+                session["messages"].append({"role": "assistant", "content": full_response})
+                backend.save_history(data)
+                st.rerun()
 
 # ================== CSS ==================
 st.markdown("""
@@ -156,18 +198,18 @@ section[data-testid="stSidebar"] {
 st.markdown(
     """
 <div class="fab-container">
-    <button onclick="window.scrollTo({top:0, behavior:'smooth'});">⬆️</button>
+    <button onclick="parent.window.scrollTo({top:0, behavior:'smooth'});">⬆️</button>
     <button onclick="scrollToPrev()">🔼</button>
     <button onclick="scrollToNext()">🔽</button>
-    <button onclick="window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'});">⬇️</button>
+    <button onclick="parent.window.scrollTo({top:parent.document.body.scrollHeight, behavior:'smooth'});">⬇️</button>
 </div>
 <script>
 function getMsgs(){
-    return Array.from(document.querySelectorAll('.chat-msg'));
+    return Array.from(parent.document.querySelectorAll('.chat-msg'));
 }
 function scrollToPrev(){
     const msgs = getMsgs();
-    const y = window.scrollY;
+    const y = parent.window.scrollY;
     let target=null;
     for(const el of msgs){
         if(el.offsetTop < y - 10) target = el;
@@ -177,7 +219,7 @@ function scrollToPrev(){
 }
 function scrollToNext(){
     const msgs = getMsgs();
-    const y = window.scrollY;
+    const y = parent.window.scrollY;
     for(const el of msgs){
         if(el.offsetTop > y + 10){ el.scrollIntoView({behavior:'smooth'}); break; }
     }
