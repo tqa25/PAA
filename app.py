@@ -77,19 +77,22 @@ else:
         session["messages"] = []
 
     # Hiển thị hội thoại cũ
-    for msg in session["messages"]:
+    for idx, msg in enumerate(session["messages"]):
         with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+            st.markdown(f'<div class="chat-msg" id="msg-{idx}">{msg["content"]}</div>', unsafe_allow_html=True)
+
+    # Nhập prompt mới
+    st.markdown('<div id="chat-input-anchor"></div>', unsafe_allow_html=True)
+    prompt = st.chat_input("Nhập tin nhắn và nhấn Enter...")
 
     # Tùy chọn bổ sung
     opt_col1, opt_col2 = st.columns(2)
     with opt_col1:
-        save_log = st.checkbox("\ud83d\udcdd Lưu nhật ký", key="save_log")
+        save_log = st.checkbox("📝 Lưu nhật ký", key="save_log")
     with opt_col2:
-        online_search = st.checkbox("\ud83d\udd0d Search online", key="online_search")
+        online_search = st.checkbox("🔍 Search online", key="online_search")
 
-    # Nhập prompt mới
-    if prompt := st.chat_input("Nhập tin nhắn và nhấn Enter..."):
+    if prompt:
         session["messages"].append({"role": "user", "content": prompt})
         if save_log:
             backend.log_user_activity(current_sid, prompt, model)
@@ -97,12 +100,12 @@ else:
 
         # Hiển thị input user ngay lập tức
         with st.chat_message("user"):
-            st.markdown(prompt)
+            st.markdown(f'<div class="chat-msg">{prompt}</div>', unsafe_allow_html=True)
 
         if online_search:
             result = backend.search_online(prompt)
             with st.chat_message("assistant"):
-                st.markdown(result)
+                st.markdown(f'<div class="chat-msg">{result}</div>', unsafe_allow_html=True)
             session["messages"].append({"role": "assistant", "content": result})
             backend.save_history(data)
             st.rerun()
@@ -116,6 +119,8 @@ else:
                     token = chunk["message"]["content"]
                     full_response += token
                     placeholder.markdown(full_response)
+
+                placeholder.markdown(f'<div class="chat-msg">{full_response}</div>', unsafe_allow_html=True)
 
             session["messages"].append({"role": "assistant", "content": full_response})
             backend.save_history(data)
@@ -147,3 +152,61 @@ section[data-testid="stSidebar"] {
 }
 </style>
 """, unsafe_allow_html=True)
+
+st.markdown(
+    """
+<div class="fab-container">
+    <button onclick="window.scrollTo({top:0, behavior:'smooth'});">⬆️</button>
+    <button onclick="scrollToPrev()">🔼</button>
+    <button onclick="scrollToNext()">🔽</button>
+    <button onclick="window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'});">⬇️</button>
+</div>
+<script>
+function getMsgs(){
+    return Array.from(document.querySelectorAll('.chat-msg'));
+}
+function scrollToPrev(){
+    const msgs = getMsgs();
+    const y = window.scrollY;
+    let target=null;
+    for(const el of msgs){
+        if(el.offsetTop < y - 10) target = el;
+        else break;
+    }
+    if(target) target.scrollIntoView({behavior:'smooth'});
+}
+function scrollToNext(){
+    const msgs = getMsgs();
+    const y = window.scrollY;
+    for(const el of msgs){
+        if(el.offsetTop > y + 10){ el.scrollIntoView({behavior:'smooth'}); break; }
+    }
+}
+</script>
+<style>
+.fab-container{
+    position:fixed;
+    right:20px;
+    bottom:80px;
+    z-index:9999;
+    display:flex;
+    flex-direction:column;
+}
+.fab-container button{
+    margin-top:5px;
+    border:none;
+    border-radius:50%;
+    width:40px;
+    height:40px;
+    background:#353739;
+    color:#e3e3e3;
+    cursor:pointer;
+}
+.fab-container button:hover{
+    background:#8ab4f8;
+    color:#131314;
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
