@@ -193,14 +193,19 @@ st.markdown(
 <script>
 (function(){
   // --- helpers cuộn (giữ nguyên) ---
-  function getDoc(){ try { return document; } catch(e){ return document; } }
+  // Thử lấy document & window của trang cha (Streamlit render trong iframe)
+  function getDoc(){
+    try { return window.parent.document; }
+    catch(e){ return document; }
+  }
   const doc = getDoc();
+  const win = doc.defaultView || window.parent || window;
   const se = doc.scrollingElement || doc.documentElement || doc.body;
 
   function getUserMsgs(){ return Array.from(doc.querySelectorAll('.chat-msg.user')); }
-  function scrollTop(){ se.scrollTo({top:0, behavior:'smooth'}); }
-  function scrollBottom(){ se.scrollTo({top: se.scrollHeight, behavior:'smooth'}); }
-  function y(){ return se.scrollTop || 0; }
+  function scrollTop(){ win.scrollTo({top:0, behavior:'smooth'}); }
+  function scrollBottom(){ win.scrollTo({top: se.scrollHeight, behavior:'smooth'}); }
+  function y(){ return win.scrollY || se.scrollTop || 0; }
   function absTop(el){ const r = el.getBoundingClientRect(); return r.top + y(); }
   function closestPrevByTop(elems, curY){ let t=null; for(const el of elems){const top=absTop(el); if(top<curY-8) t=el; else break;} return t; }
   function firstNextByTop(elems, curY){ for(const el of elems){const top=absTop(el); if(top>curY+8) return el;} return null; }
