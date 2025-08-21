@@ -52,6 +52,7 @@ Các thành phần:
 Chọn Model: Dropdown để chuyển đổi AI model
 Nút tạo phiên mới: Tạo cuộc hội thoại mới với một click
 Lịch sử phiên: Expander hiển thị danh sách các phiên chat
+Hiển thị tên phiên đang hoạt động ở đầu sidebar
 
 
 
@@ -86,3 +87,20 @@ Màu nền tối (#1e1f20)
 Button hover effects với màu xanh (#8ab4f8)
 Responsive layout cho session rows
 Typography tối ưu cho dark mode
+
+
+8. Ghi nhật ký người dùng
+
+Mô tả: Lưu lại các thao tác của người dùng để phân tích và tạo báo cáo trong tương lai
+Cách hoạt động:
+
+- Nhấn vào chữ **📝 Nhật ký** dưới ô nhập prompt để ghi tin nhắn vào `user_logs.json` cùng thời gian, phiên và model. Khi bật chế độ này, trợ lý chỉ xác nhận đã lưu mà không gửi nội dung tới LLM.
+
+9. Tìm kiếm online qua n8n
+
+Mô tả: Kết nối với n8n self-host để tra cứu tài liệu mới nhất
+Cách hoạt động:
+
+- Nhấn **🔍 Search** dưới ô nhập prompt
+- Ứng dụng gửi yêu cầu đến webhook n8n (đặt trong biến môi trường `N8N_WEBHOOK_URL`)
+- Kết quả trả về được hiển thị như một tin nhắn trợ lý trong phiên chat hiện tại
