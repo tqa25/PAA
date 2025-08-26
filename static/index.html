@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chat với Hân</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" aria-label="Sidebar">
+    <div class="sidebar-inner">
+      <div class="logo"><div class="dot"></div> Chat với Hân</div>
+
+      <nav class="nav" aria-label="Primary">
+        <a id="btnNewChat" class="nav-item" href="javascript:void(0)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          New chat
+        </a>
+        <a id="btnSearchChats" class="nav-item" href="javascript:void(0)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Search chats
+        </a>
+      </nav>
+
+      <div class="section-title">Chats</div>
+      <div id="chatList" class="chat-list" aria-label="Chat history"></div>
+
+      
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="header">
+      <button id="toggleSidebar" class="collapse-btn" aria-label="Close sidebar" title="Close sidebar">
+        <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M14.5 6l-5 6 5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="model" style="margin-left:8px">
+        <span id="modelLabel">Model</span>
+        <select id="modelSelect" title="Chọn model"></select>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Empty state -->
+      <div id="emptyState" class="center">
+        <h1>Good to see you, Dũ.</h1>
+        <div class="muted">Bạn có thể hỏi bất cứ điều gì. Nhấn Enter để gửi.</div>
+      </div>
+
+      <!-- Messages thread -->
+      <div id="messages" class="thread" aria-live="polite" aria-label="Conversation"></div>
+    </div>
+  </main>
+
+  <!-- Prompt bar (fixed bottom, giống style mock) -->
+  <div class="prompt-bar">
+    <div id="prompt" class="prompt" role="search">
+      <button id="addMenuBtn" class="add-btn" aria-haspopup="true" aria-expanded="false" title="Add">
+        <svg class="plus" width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+  <textarea id="chatInput" placeholder="Ask anything" aria-label="Ask anything" rows="1"></textarea>
+      <div class="controls">
+        <button class="icon-btn" title="Voice (demo)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="9" y="3" width="6" height="12" rx="3" stroke="currentColor" stroke-width="2"/>
+            <path d="M5 11a7 7 0 0014 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 19v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button id="btnSend" class="icon-btn" title="Send">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M3 12l18-8-8 18-2-7-8-3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Add dropdown menu -->
+      <div id="addMenu" class="add-menu" role="menu" aria-label="Add menu">
+        <a class="menu-item" role="menuitem" href="javascript:void(0)" data-act="log">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 5h12a3 3 0 0 1 3 3v11H7a3 3 0 0 1-3-3V5z" stroke="currentColor" stroke-width="2"/>
+            <path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span class="desc">Nhật ký</span>
+        </a>
+        <a class="menu-item" role="menuitem" href="javascript:void(0)" data-act="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+            <path d="M21 21l-4.2-4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span class="desc">Web search</span>
+        </a>
+      </div>
+      <!-- End Add menu -->
+    </div>
+  </div>
+
+  <!-- Context menu (rename/clear/delete) -->
+  <div id="ctxMenu" class="ctx-menu" role="menu" aria-hidden="true">
+    <button data-act="rename">✏️ Rename</button>
+    <button data-act="clear">🧹 Clear</button>
+    <button data-act="delete">❌ Delete</button>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

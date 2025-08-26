@@ -34,5 +34,11 @@
     "session_id": "f5253c55-7dde-4240-99d8-f06880716b58",
     "model": "llama3.2:3b",
     "message": "ngày 11 tháng 8:\n- tập mông , từ 6h~ 6h40\n- sáng ăn bánh mì\n- trưa ăn cơm thịt heo quay , canh giá hẹ 2k ( mua)\n- tối ăn bánh xèo , đi cho móp méo nghé đi ăn, tối ăn thêm 1 tô bánh canh"
+  },
+  {
+    "timestamp": "2025-08-21T17:16:08.670425",
+    "session_id": "1755757421.291211",
+    "model": "hf.co/Qwen/Qwen3-0.6B-GGUF:Q8_0",
+    "message": "21 tháng 8 / sáng ăn bún mọc / trời mưa từ sớm / phòng tạ không mở cửa / lên công ty rồi nằm ngủ đến giờ làm / trưa ăn bún bò"
   }
 ]
