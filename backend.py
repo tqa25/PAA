@@ -1,6 +1,7 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, date
+from typing import Dict, Any, List
 
 try:
     import ollama  # type: ignore
@@ -14,6 +15,13 @@ except ModuleNotFoundError:  # pragma: no cover - optional dependency
 
 DATA_FILE = "chat_history.json"
 LOG_FILE = "user_logs.json"
+
+# ====== Pinned journal session definitions (fixed IDs) ======
+JOURNAL_DEFS = [
+    {"id": "journal_workout", "name": "🏋️ Workout Journal", "journal_tag": "workout"},
+    {"id": "journal_eat", "name": "🍽️ Eat Journal", "journal_tag": "eat"},
+    {"id": "journal_daily", "name": "📓 Daily Journal", "journal_tag": "daily"},
+]
 N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL")
 
 # ================== HISTORY ==================
@@ -45,15 +53,107 @@ def clear_session_messages(data, sid):
     return data
 
 
+# ================== JOURNAL SEED / MIGRATION ==================
+def migrate_journals(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensure 3 pinned journal sessions exist. Do not overwrite existing messages.
+    Adds metadata: pinned=True, journal_tag=<tag>."""
+    sessions = data.setdefault("sessions", {})
+    changed = False
+    for jd in JOURNAL_DEFS:
+        sid = jd["id"]
+        if sid not in sessions:
+            # Create new pinned journal session
+            sessions[sid] = {
+                "name": jd["name"],
+                "messages": [],
+                "pinned": True,
+                "journal_tag": jd["journal_tag"],
+                "updated_at": datetime.now().isoformat(),
+            }
+            changed = True
+        else:
+            # Ensure metadata exists
+            sess = sessions[sid]
+            if not sess.get("pinned"):
+                sess["pinned"] = True; changed = True
+            if sess.get("journal_tag") != jd["journal_tag"]:
+                sess["journal_tag"] = jd["journal_tag"]; changed = True
+            if not sess.get("name"):
+                sess["name"] = jd["name"]; changed = True
+    if changed:
+        save_history(data)
+    return data
+
+
+def is_journal_session(session: Dict[str, Any]) -> bool:
+    return bool(session.get("pinned") and session.get("journal_tag"))
+
+
+def append_message(session: Dict[str, Any], role: str, content: str):
+    """Helper to append a message with timestamp (+ tag if journal)."""
+    msg = {"role": role, "content": content, "ts": datetime.now().isoformat()}
+    if is_journal_session(session):  # auto tag
+        msg["tag"] = session.get("journal_tag")
+    session.setdefault("messages", []).append(msg)
+    # update updated_at for sorting (also journals)
+    session["updated_at"] = msg["ts"]
+
+
+def iter_messages(data: Dict[str, Any], tag: str | None = None):
+    """Iterate all messages across sessions optionally filtered by tag."""
+    for sid, sess in data.get("sessions", {}).items():
+        for m in sess.get("messages", []):
+            if tag and m.get("tag") != tag:
+                continue
+            yield sid, m
+
+
+def filter_messages_by_tag_and_date(data: Dict[str, Any], tag: str | None, from_date: date | None, to_date: date | None) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    for sid, m in iter_messages(data, tag):
+        ts = m.get("ts")
+        if not ts:
+            continue
+        try:
+            d = datetime.fromisoformat(ts).date()
+        except Exception:
+            continue
+        if from_date and d < from_date:
+            continue
+        if to_date and d > to_date:
+            continue
+        row = {"session_id": sid, **m}
+        out.append(row)
+    return out
+
+
+def search_messages(data: Dict[str, Any], keyword: str, session_id: str | None = None, tag: str | None = None) -> List[Dict[str, Any]]:
+    key = keyword.lower()
+    results: List[Dict[str, Any]] = []
+    sessions_iter = (
+        ((session_id, data["sessions"].get(session_id)) ,) if session_id and session_id in data.get("sessions", {}) else data.get("sessions", {}).items()
+    )
+    for sid, sess in sessions_iter:
+        if not sess:
+            continue
+        for idx, m in enumerate(sess.get("messages", [])):
+            if tag and m.get("tag") != tag:
+                continue
+            if key in (m.get("content") or "").lower():
+                results.append({"session_id": sid, "index": idx, **m})
+    return results
+
+
 # ================== LOGGING ==================
 
-def log_user_activity(session_id: str, message: str, model: str | None = None) -> None:
-    """Append a user action to the log file."""
+def log_user_activity(session_id: str, message: str, model: str | None = None, tag: str | None = None) -> None:
+    """Append a user action (journal or generic) to the log file."""
     entry = {
         "timestamp": datetime.now().isoformat(),
         "session_id": session_id,
         "model": model,
         "message": message,
+        **({"tag": tag} if tag else {}),
     }
 
     logs = []

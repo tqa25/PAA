@@ -40,5 +40,39 @@
     "session_id": "1755757421.291211",
     "model": "hf.co/Qwen/Qwen3-0.6B-GGUF:Q8_0",
     "message": "21 tháng 8 / sáng ăn bún mọc / trời mưa từ sớm / phòng tạ không mở cửa / lên công ty rồi nằm ngủ đến giờ làm / trưa ăn bún bò"
+  },
+  {
+    "timestamp": "2025-08-22T15:53:33.089127",
+    "session_id": "1755757421.291211",
+    "model": "hf.co/Qwen/Qwen3-0.6B-GGUF:Q8_0",
+    "message": "Tối 21 tháng 8 ăn nuôi xương / xem vô hạn thành với bé"
+  },
+  {
+    "timestamp": "2025-08-26T08:48:55.864253",
+    "session_id": "journal_daily",
+    "model": null,
+    "message": "26 tháng 8\ntrời mưa từ sáng sớm / dậy lúc 6h50 / dầm mưa đi làm",
+    "tag": "daily"
+  },
+  {
+    "timestamp": "2025-08-26T08:50:23.106607",
+    "session_id": "journal_eat",
+    "model": null,
+    "message": "tối 25 tháng 8\năn cơm nhà nấu / canh ngót / trứng chiên bắp cải / 1 chén cơm đầy",
+    "tag": "eat"
+  },
+  {
+    "timestamp": "2025-08-26T09:18:50.824080",
+    "session_id": "journal_eat",
+    "model": null,
+    "message": "trưa 25 tháng 8\nđi ăn cơm Hàn cùng với anh Park và anh Kim / ăn 1 chén cơm / thịt bò xào / canh tương đậu Hàn quốc",
+    "tag": "eat"
+  },
+  {
+    "timestamp": "2025-08-26T09:45:21.512150",
+    "session_id": "journal_daily",
+    "model": null,
+    "message": "vneid / Ehrnrdks211@)@",
+    "tag": "daily"
   }
 ]
